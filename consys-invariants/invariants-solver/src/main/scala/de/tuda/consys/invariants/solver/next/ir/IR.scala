@@ -2,6 +2,7 @@ package de.tuda.consys.invariants.solver.next.ir
 
 
 import com.microsoft.z3.{Context, Expr, Sort}
+import de.tuda.consys.invariants.solver.next.ir.Types.{ClassId, TypeVarId}
 
 import scala.collection.mutable
 
@@ -11,10 +12,8 @@ object IR {
 	type ClassTable = Map[ClassId, ClassDecl[_ <: MethodDecl]]
 
 	type FieldId = String
-	type ClassId = String
 	type MethodId = String
 	type VarId = String
-	type TypeVarId = String
 
 	case class FieldDecl(name : FieldId, typ : Type)
 	case class VarDecl(name : VarId, typ : Type)
@@ -44,10 +43,10 @@ object IR {
 	}
 
 	case class ObjectQueryMethodDecl(
-																		override val name : MethodId,
-																		override val declaredParameters : Seq[VarDecl],
-																		override val returnTyp : Type,
-																		override val body : IRExpr
+		override val name : MethodId,
+		override val declaredParameters : Seq[VarDecl],
+		override val returnTyp : Type,
+		override val body : IRExpr
 	) extends ObjectMethodDecl with QueryMethodDecl
 
 	case class ObjectUpdateMethodDecl(
@@ -57,10 +56,10 @@ object IR {
 	) extends ObjectMethodDecl with UpdateMethodDecl
 
 	case class NativeQueryMethodDecl(
-																		override val name : MethodId,
-																		override val declaredParameters : Seq[VarDecl],
-																		override val returnTyp : Type,
-																		override val impl : (Context, Expr[_ <: Sort], Seq[Expr[_ <: Sort]]) => Expr[_ <: Sort]
+		override val name : MethodId,
+		override val declaredParameters : Seq[VarDecl],
+		override val returnTyp : Type,
+		override val impl : (Context, Expr[_ <: Sort], Seq[Expr[_ <: Sort]]) => Expr[_ <: Sort]
 	) extends NativeMethodDecl with QueryMethodDecl
 
 	trait ClassDecl[MDecl <: MethodDecl] {
@@ -81,7 +80,6 @@ object IR {
 
 		def typeParametersMapTo[A](others : Seq[A]) : Map[TypeVarId, A] =
 			typeParameters.map(typeVar => typeVar.typeVarId).zip(others).toMap
-
 	}
 
 	case class ObjectClassDecl(
@@ -109,10 +107,6 @@ object IR {
 		override def getMethod(methodId : MethodId) : Option[NativeMethodDecl] =
 			methods.get(methodId)
 	}
-
-	trait Type
-	case class TypeVar(typeVarId: TypeVarId) extends Type
-	case class ClassType(classId : ClassId, typeArguments : Seq[Type]) extends Type
 
 
 	trait TypedExpr {
@@ -161,7 +155,7 @@ object IR {
 
 			def classesInType(typ : Type) : Set[ClassId] = typ match {
 				case TypeVar(typeVarId) => Set()
-				case ClassType(classId, typeArguments) =>
+				case CompoundType(ClassType(classId, typeArguments), _, _)=>
 					Set(classId) ++ typeArguments.foldLeft(Set.empty[ClassId])((set, typArg) => set ++ classesInType(typArg))
 			}
 

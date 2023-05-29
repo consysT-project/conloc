@@ -1,11 +1,13 @@
 package de.tuda.consys.invariants.solver.next.translate
 
 import com.microsoft.z3.Sort
-import de.tuda.consys.invariants.solver.next.ir.IR.{ClassId, ClassTable, ClassType, FieldId, MethodId, Type, TypeVar, TypeVarId}
+import de.tuda.consys.invariants.solver.next.ir._
+import de.tuda.consys.invariants.solver.next.ir.IR._
+import de.tuda.consys.invariants.solver.next.ir.Types._
 import de.tuda.consys.invariants.solver.next.translate.Z3Representations.{CachedMap, FieldRep, InstantiatedClassRep, InstantiatedObjectClassRep, MethodRep}
 
 import scala.collection.mutable
-
+/*
 class RepMapBuilder(val classTable : ClassTable) {
   // Maps the class ids of object classes to their sorts and fields
   private val objectClassMap = mutable.Map.empty[ClassId, CachedMap[Seq[Sort], (Sort, Map[FieldId, FieldRep])]]
@@ -73,3 +75,5 @@ class RepMapBuilder(val classTable : ClassTable) {
   }
 
 }
+
+ */

@@ -1,7 +1,8 @@
 package de.tuda.consys.invariants.solver.next.translate
 
 import com.microsoft.z3.{BoolSort, FuncDecl, Sort, TupleSort}
-import de.tuda.consys.invariants.solver.next.ir.IR.{ClassId, FieldId, MethodId, Type, TypeVarId}
+import de.tuda.consys.invariants.solver.next.ir.IR._
+import de.tuda.consys.invariants.solver.next.ir.Types._
 
 import scala.collection.mutable
 

@@ -1,10 +1,11 @@
 package de.tuda.consys.invariants.solver.next.translate
 
 import com.microsoft.z3.{BoolSort, Context, FuncDecl, Sort, Expr => Z3Expr}
-import de.tuda.consys.invariants.solver.next.ir.IR.{TypeVarId, _}
+import de.tuda.consys.invariants.solver.next.ir.IR._
+import de.tuda.consys.invariants.solver.next.ir.Types._
 import de.tuda.consys.invariants.solver.next.translate.CompileErrors.CompileException
 import de.tuda.consys.invariants.solver.next.translate.Z3Representations.{QueryMethodRep, RepTable, UpdateMethodRep}
-
+/*
 import scala.collection.immutable.Map
 trait ExpressionCompiler {
 
@@ -15,6 +16,8 @@ trait ExpressionCompiler {
 
 }
 
+ */
+/*
 object ExpressionCompiler {
 
 	class BaseExpressionCompiler extends ExpressionCompiler {
@@ -174,3 +177,4 @@ object ExpressionCompiler {
 //		}
 //	}
 }
+*/

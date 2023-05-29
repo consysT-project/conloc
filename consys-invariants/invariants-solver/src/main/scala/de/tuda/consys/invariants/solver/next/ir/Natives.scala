@@ -1,7 +1,7 @@
 package de.tuda.consys.invariants.solver.next.ir
 
-import com.microsoft.z3.{ArraySort, BoolSort, Expr, SeqSort, SetSort, Sort}
-import de.tuda.consys.invariants.solver.next.ir.IR.{NativeClassDecl, NativeQueryMethodDecl, TypeVar, VarDecl}
+import com.microsoft.z3.{ArraySort, BoolSort, Expr, SeqSort, Sort}
+import de.tuda.consys.invariants.solver.next.ir.IR.{NativeClassDecl, NativeQueryMethodDecl, VarDecl}
 
 object Natives {
 
@@ -33,7 +33,7 @@ object Natives {
 		Seq(),
 		(ctx, sorts) => ctx.getStringSort,
 		Map(
-			"length" -> NativeQueryMethodDecl("length", Seq(), INT_TYPE, (ctx, recv, args) => {
+			"length" -> NativeQueryMethodDecl("length", Seq(), CompoundType(INT_TYPE, Local, Immutable), (ctx, recv, args) => {
 				ctx.mkLength(recv.asInstanceOf[Expr[SeqSort[Sort]]])
 			})
 		)
@@ -44,7 +44,7 @@ object Natives {
 		Seq(TypeVar("A")),
 		(ctx, sorts) => ctx.mkSetSort(sorts(0)),
 		Map(
-			"contains" -> NativeQueryMethodDecl("contains", Seq(VarDecl("x", TypeVar("A"))), BOOL_TYPE, (ctx, recv, args) => {
+			"contains" -> NativeQueryMethodDecl("contains", Seq(VarDecl("x", TypeVar("A"))), CompoundType(BOOL_TYPE, Local, Immutable), (ctx, recv, args) => {
 				ctx.mkSetMembership[Sort](args(0).asInstanceOf[Expr[Sort]], recv.asInstanceOf[Expr[ArraySort[Sort, BoolSort]]])
 			})
 		)

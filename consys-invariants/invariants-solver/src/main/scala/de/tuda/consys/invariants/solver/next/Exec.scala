@@ -3,7 +3,7 @@ package de.tuda.consys.invariants.solver.next
 import de.tuda.consys.invariants.solver.next.ir.IR.{ProgramDecl, SetField}
 import de.tuda.consys.invariants.solver.next.ir.Natives
 import de.tuda.consys.invariants.solver.next.ir.Natives.{BOOL_TYPE, INT_TYPE, SET_CLASS, STRING_TYPE}
-import de.tuda.consys.invariants.solver.next.translate.{ProgramModel, Z3Env}
+//import de.tuda.consys.invariants.solver.next.translate.{ProgramModel, Z3Env}
 import de.tuda.stg.consys.logging.Logger
 
 import java.nio.file.{Path, Paths}
@@ -34,7 +34,7 @@ object Exec {
 		}
 		else throw new RuntimeException("unsupported OS: " + osname)
 	}
-
+/*
 	def exampleProgram1() : ProgramDecl = {
 		import ir.IR._
 
@@ -43,11 +43,11 @@ object Exec {
 			Seq(),
 			Equals(GetField("value"), Num(0)),
 			Map(
-				"value" -> FieldDecl("value", INT_TYPE),
-				"name" -> FieldDecl("name", STRING_TYPE)
+				"value" -> FieldDecl("value", Type(INT_TYPE, Strong(), Mutable())),
+				"name" -> FieldDecl("name", Type(STRING_TYPE, Strong(), Mutable()))
 			),
 			Map(
-				"setVal" -> ObjectUpdateMethodDecl("setVal", Seq(VarDecl("x", INT_TYPE)),
+				"setVal" -> ObjectUpdateMethodDecl("setVal", Seq(VarDecl("x", Type(INT_TYPE, Strong(), Mutable()))),
 					Let("a0", SetField("value", Var("x")),
 						UnitLiteral
 					)
@@ -73,8 +73,8 @@ object Exec {
 						UnitLiteral
 					)
 				),
-				"getVal" -> ObjectQueryMethodDecl("getVal", Seq(), INT_TYPE, GetField("value")),
-				"getVal2" -> ObjectQueryMethodDecl("getVal2", Seq(), INT_TYPE, CallQuery(This, "getVal", Seq()))
+				"getVal" -> ObjectQueryMethodDecl("getVal", Seq(), Type(INT_TYPE, Strong(), Mutable()), GetField("value")),
+				"getVal2" -> ObjectQueryMethodDecl("getVal2", Seq(), Type(INT_TYPE, Strong(), Mutable()), CallQuery(This, "getVal", Seq()))
 			)
 		)
 
@@ -83,10 +83,10 @@ object Exec {
 			Seq(),
 			Equals(CallQuery(GetField("box"), "getVal", Seq()), Num(0)),
 			Map(
-				"box" -> FieldDecl("box", boxCls.toType(Seq()))
+				"box" -> FieldDecl("box", Type(boxCls.toType(Seq()), Strong(), Mutable()))
 			),
 			Map(
-				"setVal" -> ObjectUpdateMethodDecl("setVal", Seq(VarDecl("x", INT_TYPE)),
+				"setVal" -> ObjectUpdateMethodDecl("setVal", Seq(VarDecl("x", Type(INT_TYPE, Strong(), Mutable()))),
 					CallUpdateField("box", "setVal", Seq(Num(3)))
 				)
 			)
@@ -101,7 +101,8 @@ object Exec {
 			"Box2" -> box2Cls
 		))
 	}
-
+ */
+/*
 	def exampleProgram2() : ProgramDecl = {
 		import ir.IR._
 
@@ -171,14 +172,55 @@ object Exec {
 			"Name" -> nameCls
 		))
 	}
+*/
+	/*
+	def exampleProgram3(): ProgramDecl = {
+		import ir.IR._
 
+		val boxCls = ObjectClassDecl(
+			"Box",
+			Seq(),
+			True,
+			Map(
+				"value" -> FieldDecl("value", Type(INT_TYPE, Strong, Mutable)),
+			),
+			Map(
+				"setVal" -> ObjectUpdateMethodDecl("setVal", Seq(VarDecl("x", Type(INT_TYPE, Strong, Mutable))),
+					Let("a0", SetField("value", Var("x")),
+						UnitLiteral
+					)
+				),
+				"foo2" -> ObjectUpdateMethodDecl("foo2", Seq(),
+					Let("a0", CallUpdateThis("setVal", Seq(Num(42))),
+						UnitLiteral
+					)
+				),
+				"getVal" -> ObjectQueryMethodDecl("getVal", Seq(), Type(INT_TYPE, Strong, Mutable),
+					GetField("value")
+				),
+			)
+		)
+
+		ProgramDecl(Map(
+			"Int" -> Natives.INT_CLASS,
+			"Bool" -> Natives.BOOL_CLASS,
+			"String" -> Natives.STRING_CLASS,
+			"Unit" -> Natives.UNIT_CLASS,
+			"Box" -> boxCls,
+		))
+	}
+
+	 */
 
 	def main(args : Array[String]) : Unit = {
-		val prog = exampleProgram2()
+		/*
+		val prog = exampleProgram3()
 
 		val env = new Z3Env()
 		val model = new ProgramModel(env, prog)
 		model.create()
+
+		 */
 	}
 
 }
