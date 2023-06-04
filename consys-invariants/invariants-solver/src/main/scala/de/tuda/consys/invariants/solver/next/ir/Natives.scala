@@ -40,6 +40,7 @@ object Natives {
 	)
 	val STRING_TYPE = STRING_CLASS.toType(Seq())
 
+	/*
 	val SET_CLASS = NativeClassDecl("Set",
 		Seq(TypeVar("A")),
 		(ctx, sorts) => ctx.mkSetSort(sorts(0)),
@@ -49,5 +50,5 @@ object Natives {
 			})
 		)
 	)
-
+	 */
 }

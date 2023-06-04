@@ -1,8 +1,9 @@
 package de.tuda.consys.invariants.solver.next
 
 import de.tuda.consys.invariants.solver.next.ir.IR.{ProgramDecl, SetField}
-import de.tuda.consys.invariants.solver.next.ir.Natives
-import de.tuda.consys.invariants.solver.next.ir.Natives.{BOOL_TYPE, INT_TYPE, SET_CLASS, STRING_TYPE}
+import de.tuda.consys.invariants.solver.next.ir.{CompoundType, Immutable, Mutable, Natives, Strong, Weak}
+import de.tuda.consys.invariants.solver.next.ir.Natives.{BOOL_TYPE, INT_TYPE, STRING_TYPE}
+import de.tuda.consys.invariants.solver.next.translate.types.TypeChecker
 //import de.tuda.consys.invariants.solver.next.translate.{ProgramModel, Z3Env}
 import de.tuda.stg.consys.logging.Logger
 
@@ -11,7 +12,7 @@ import java.nio.file.{Path, Paths}
 object Exec {
 
 	{
-		loadZ3Libs()
+		//loadZ3Libs()
 	}
 
 	private def loadLib(lib : Path) : Unit = {
@@ -34,6 +35,7 @@ object Exec {
 		}
 		else throw new RuntimeException("unsupported OS: " + osname)
 	}
+
 /*
 	def exampleProgram1() : ProgramDecl = {
 		import ir.IR._
@@ -173,7 +175,7 @@ object Exec {
 		))
 	}
 */
-	/*
+/*
 	def exampleProgram3(): ProgramDecl = {
 		import ir.IR._
 
@@ -209,10 +211,51 @@ object Exec {
 			"Box" -> boxCls,
 		))
 	}
+*/
 
-	 */
+	def exampleProgram3(): ProgramDecl = {
+		import ir.IR._
+
+		val boxCls = ObjectClassDecl(
+			"Box",
+			Seq(),
+			True,
+			Map(
+				"value" -> FieldDecl("value", CompoundType(INT_TYPE, Strong, Mutable)),
+			),
+			Map(
+				"setVal" -> ObjectUpdateMethodDecl("setVal", Seq(VarDecl("x", CompoundType(INT_TYPE, Strong, Mutable))),
+					Let("a0", SetField("value", Var("x")),
+						UnitLiteral
+					)
+				),
+				"getVal" -> ObjectQueryMethodDecl("getVal", Seq(), CompoundType(INT_TYPE, Weak, Immutable),
+					GetField("value")
+				),
+			)
+		)
+
+		ProgramDecl(
+			Map(
+				"Int" -> Natives.INT_CLASS,
+				"Bool" -> Natives.BOOL_CLASS,
+				"Unit" -> Natives.UNIT_CLASS,
+				"Box" -> boxCls,
+			),
+			Let("x", New("Box", Seq()),
+				Let("n", CallQuery(Var("x"), "getVal", Seq()),
+					Sequence(Seq(
+						CallUpdate(Var("x"), "setVal", Seq(Var("n"))),
+					))
+				)
+			)
+		)
+	}
 
 	def main(args : Array[String]) : Unit = {
+		val p = exampleProgram3()
+		TypeChecker.checkProgram(p)
+
 		/*
 		val prog = exampleProgram3()
 

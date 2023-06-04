@@ -6,9 +6,9 @@ import de.tuda.consys.invariants.solver.next.translate.types.TypeChecker.{TypeEn
 object Types {
 
   def resolveType(typ : Type, typeVars : TypeEnv) : Type = typ match {
-    case TypeVar(x) => typeVars.getOrElse(x, throw TypeException(s"type variable not declared: " + x))
-    case CompoundType(ClassType(classId, typeArgs), _, _) => ???
-      //ClassType(classId, typeArgs.map(arg => resolveType(arg, typeVars)))
+    case TypeVar(x, _) => typeVars.getOrElse(x, throw TypeException(s"type variable not declared: " + x))
+    case CompoundType(ClassType(classId, typeArgs), c, m) =>
+      CompoundType(ClassType(classId, typeArgs.map(arg => resolveType(arg, typeVars))), c, m)
   }
 
 }

@@ -113,6 +113,13 @@ object IR {
 		def typ : Type
 	}
 
+	trait Value
+	case class NumV(n: Int) extends Value
+	case class BoolV(b: Boolean) extends Value
+	case class StringV(s: String) extends Value
+	case class ObjectV(classId: ClassId) extends Value
+	case object UnitV extends Value
+
 	trait IRExpr
 	trait IRLiteral extends IRExpr
 	case class Num(n : Int) extends IRLiteral
@@ -121,13 +128,16 @@ object IR {
 	case class Str(s : String) extends IRLiteral
 	case object UnitLiteral extends IRLiteral
 
-
 	case class Var(id : VarId) extends IRExpr
 	case class Let(id : VarId, namedExpr : IRExpr, body : IRExpr) extends IRExpr
 
 	case class If(conditionExpr : IRExpr, thenExpr : IRExpr, elseExpr : IRExpr) extends IRExpr
 
 	case class Equals(e1 : IRExpr, e2 : IRExpr) extends IRExpr
+
+	case class New(classId: ClassId, typeArguments: Seq[Type]) extends IRExpr
+
+	case class Sequence(exprs: Seq[IRExpr]) extends IRExpr
 
 	case object This extends IRExpr
 	case class GetField(fieldId : FieldId) extends IRExpr
@@ -137,28 +147,23 @@ object IR {
 		def arguments : Seq[IRExpr]
 		def methodId : MethodId
 	}
+
 	case class CallQuery(recv : IRExpr, methodId : MethodId, arguments : Seq[IRExpr]) extends IRMethodCall
+	case class CallUpdate(recv : IRExpr, methodId : MethodId, arguments : Seq[IRExpr]) extends IRMethodCall
+
 	case class CallUpdateThis(methodId : MethodId, arguments : Seq[IRExpr]) extends IRMethodCall
 	case class CallUpdateField(fieldId : FieldId, methodId : MethodId, arguments : Seq[IRExpr]) extends IRMethodCall
 
 
-
-
-
-
-
-
-	case class ProgramDecl(classTable : ClassTable) {
+	case class ProgramDecl(classTable : ClassTable, body: IRExpr) {
 		lazy val classes : Iterable[ClassDecl[_ <: MethodDecl]] = makeClassTableIterable
 
 		private def makeClassTableIterable : Iterable[ClassDecl[_ <: MethodDecl]] = {
-
 			def classesInType(typ : Type) : Set[ClassId] = typ match {
-				case TypeVar(typeVarId) => Set()
+				case TypeVar(typeVarId, _) => Set()
 				case CompoundType(ClassType(classId, typeArguments), _, _)=>
 					Set(classId) ++ typeArguments.foldLeft(Set.empty[ClassId])((set, typArg) => set ++ classesInType(typArg))
 			}
-
 
 			val classDecls = classTable.values
 			val classDependenciesBuilder = Map.newBuilder[ClassId, Set[ClassId]]
@@ -173,7 +178,6 @@ object IR {
 				}
 			}
 			val classDependencies = classDependenciesBuilder.result()
-
 
 			val iterable = Iterable.newBuilder[ClassDecl[_ <: MethodDecl]]
 			val resolvedDependencies = mutable.Set.empty[ClassId]
@@ -191,7 +195,5 @@ object IR {
 
 			iterable.result()
 		}
-
 	}
-
 }

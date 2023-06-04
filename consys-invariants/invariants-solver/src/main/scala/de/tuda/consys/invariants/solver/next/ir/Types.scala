@@ -10,6 +10,8 @@ trait Type {
     def lub(t: Type): Type
 
     def glb(t: Type): Type
+
+    def effectiveType(): CompoundType
 }
 
 trait ConsistencyType {
@@ -74,13 +76,15 @@ object MutabilityTypeLattice {
         case Bottom => bottom
         case Mutable => mutable
         case Immutable => immutable
-        case _ => sys.error("lattice node for consistency type not found")
+        case _ => sys.error("lattice node for mutability type not found")
     }
 }
 
 trait BaseType
 
-case class ClassType(classId: ClassId, typeArguments: Seq[Type]) extends BaseType
+case class ClassType(classId: ClassId, typeArguments: Seq[Type]) extends BaseType {
+    override def toString: ClassId = if (typeArguments.isEmpty) s"$classId" else s"$classId<${typeArguments.mkString(",")}>"
+}
 
 case class CompoundType(baseType: BaseType, consistencyType: ConsistencyType, mutabilityType: MutabilityType) extends Type {
     if (mutabilityType == Bottom && consistencyType != Local)
@@ -113,10 +117,13 @@ case class CompoundType(baseType: BaseType, consistencyType: ConsistencyType, mu
         case CompoundType(baseType, consistencyType, mutabilityType) => ???
         case _ => ???
     }
+
+    def effectiveType(): CompoundType = this
+
+    override def toString: ClassId = s"$mutabilityType $consistencyType $baseType"
 }
 
-// TODO
-case class TypeVar(typeVarId: TypeVarId) extends Type {
+case class TypeVar(typeVarId: TypeVarId, upperBound: Type) extends Type {
     def <=(t: Type): Boolean = ???
 
     def >=(t: Type): Boolean = ???
@@ -124,7 +131,21 @@ case class TypeVar(typeVarId: TypeVarId) extends Type {
     def lub(t: Type): Type = ???
 
     def glb(t: Type): Type = ???
+
+    def effectiveType(): CompoundType = upperBound match {
+        case t@CompoundType(_, _, _) => t
+        case t@TypeVar(_, _) => t.effectiveType()
+        case _ => ???
+    }
+
+    override def toString: ClassId = s"$typeVarId <: $upperBound"
 }
+
+trait OperationLevel
+
+case object StrongOp extends OperationLevel
+
+case object WeakOp extends OperationLevel
 
 class LatticeNode[T](value: T, parents: => List[LatticeNode[T]], children: => List[LatticeNode[T]]) {
     def hasUpperBound(t: T): Boolean = t match {
