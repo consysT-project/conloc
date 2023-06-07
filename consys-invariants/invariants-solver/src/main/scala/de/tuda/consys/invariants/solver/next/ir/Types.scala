@@ -19,9 +19,13 @@ trait ConsistencyType {
 
     def >=(t: ConsistencyType): Boolean = ConsistencyTypeLattice(this).hasLowerBound(t)
 
-    def lub(t: ConsistencyType): ConsistencyType = ???
+    def lub(t: ConsistencyType): ConsistencyType = {
+        if (this <= t) t else this // TODO: generalize
+    }
 
-    def glb(t: ConsistencyType): ConsistencyType = ???
+    def glb(t: ConsistencyType): ConsistencyType = {
+        if (this >= t) t else this // TODO: generalize
+    }
 }
 
 case object Local extends ConsistencyType
@@ -141,11 +145,19 @@ case class TypeVar(typeVarId: TypeVarId, upperBound: Type) extends Type {
     override def toString: ClassId = s"$typeVarId <: $upperBound"
 }
 
-trait OperationLevel
+trait OperationLevel {
+    def consistencyType(): ConsistencyType
+}
 
-case object StrongOp extends OperationLevel
+case object StrongOp extends OperationLevel {
+    override def consistencyType(): ConsistencyType = Strong
+}
 
-case object WeakOp extends OperationLevel
+case object WeakOp extends OperationLevel {
+    override def consistencyType(): ConsistencyType = Weak
+}
+
+
 
 class LatticeNode[T](value: T, parents: => List[LatticeNode[T]], children: => List[LatticeNode[T]]) {
     def hasUpperBound(t: T): Boolean = t match {

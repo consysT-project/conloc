@@ -24,6 +24,8 @@ object IR {
 
 		def declaredParameterTypes : Seq[Type] =
 			declaredParameters.map(varDecl => varDecl.typ)
+
+		def operationLevel: OperationLevel
 	}
 
 	trait ObjectMethodDecl extends MethodDecl {
@@ -44,6 +46,7 @@ object IR {
 
 	case class ObjectQueryMethodDecl(
 		override val name : MethodId,
+		override val operationLevel: OperationLevel,
 		override val declaredParameters : Seq[VarDecl],
 		override val returnTyp : Type,
 		override val body : IRExpr
@@ -51,12 +54,14 @@ object IR {
 
 	case class ObjectUpdateMethodDecl(
 		override val name : MethodId,
+		override val operationLevel: OperationLevel,
 		override val declaredParameters : Seq[VarDecl],
 		override val body : IRExpr
 	) extends ObjectMethodDecl with UpdateMethodDecl
 
 	case class NativeQueryMethodDecl(
 		override val name : MethodId,
+		override val operationLevel: OperationLevel,
 		override val declaredParameters : Seq[VarDecl],
 		override val returnTyp : Type,
 		override val impl : (Context, Expr[_ <: Sort], Seq[Expr[_ <: Sort]]) => Expr[_ <: Sort]

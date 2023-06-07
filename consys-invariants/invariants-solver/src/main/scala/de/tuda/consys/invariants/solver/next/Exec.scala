@@ -1,7 +1,7 @@
 package de.tuda.consys.invariants.solver.next
 
 import de.tuda.consys.invariants.solver.next.ir.IR.{ProgramDecl, SetField}
-import de.tuda.consys.invariants.solver.next.ir.{CompoundType, Immutable, Mutable, Natives, Strong, Weak}
+import de.tuda.consys.invariants.solver.next.ir.{CompoundType, Immutable, Mutable, Natives, Strong, StrongOp, Weak, WeakOp}
 import de.tuda.consys.invariants.solver.next.ir.Natives.{BOOL_TYPE, INT_TYPE, STRING_TYPE}
 import de.tuda.consys.invariants.solver.next.translate.types.TypeChecker
 //import de.tuda.consys.invariants.solver.next.translate.{ProgramModel, Z3Env}
@@ -224,12 +224,13 @@ object Exec {
 				"value" -> FieldDecl("value", CompoundType(INT_TYPE, Strong, Mutable)),
 			),
 			Map(
-				"setVal" -> ObjectUpdateMethodDecl("setVal", Seq(VarDecl("x", CompoundType(INT_TYPE, Strong, Mutable))),
-					Let("a0", SetField("value", Var("x")),
+				"setVal" -> ObjectUpdateMethodDecl("setVal", StrongOp, Seq(VarDecl("x", CompoundType(INT_TYPE, Strong, Mutable))),
+					Sequence(
+						Seq(SetField("value", Var("x")),
 						UnitLiteral
-					)
+					))
 				),
-				"getVal" -> ObjectQueryMethodDecl("getVal", Seq(), CompoundType(INT_TYPE, Weak, Immutable),
+				"getVal" -> ObjectQueryMethodDecl("getVal", WeakOp, Seq(), CompoundType(INT_TYPE, Strong, Mutable),
 					GetField("value")
 				),
 			)

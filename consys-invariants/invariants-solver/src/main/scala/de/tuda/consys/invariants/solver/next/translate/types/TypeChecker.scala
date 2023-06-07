@@ -28,13 +28,13 @@ object TypeChecker {
 
   def checkProgram(programDecl: ProgramDecl): Unit = {
     programDecl.classes.foreach(c => checkClass(c)(programDecl.classTable))
-    typeOfExpr(programDecl.body, Map.empty)(null, MutableContext, programDecl.classTable)
+    typeOfExpr(programDecl.body, Map.empty)(null, MutableContext, Local, programDecl.classTable) // TODO
   }
 
   def checkClass(classDecl : ClassDecl[_])(implicit classTable : ClassTable) : Unit = classDecl match {
     case ObjectClassDecl(name, typeParameters, invariant, fields, methods) =>
 
-      val invariantType = TypeChecker.typeOfExpr(invariant, Map())(classDecl.asType, ImmutableContext, classTable).effectiveType()
+      val invariantType = TypeChecker.typeOfExpr(invariant, Map())(classDecl.asType, ImmutableContext, Local, classTable).effectiveType()
       if (invariantType.baseType != Natives.BOOL_TYPE)
         throw TypeException(s"invariant is not Bool, but: " + invariantType)
 
@@ -42,11 +42,11 @@ object TypeChecker {
         val varEnv : VarEnv = methodDecl.declaredParameters.map(varDecl => (varDecl.name, varDecl.typ)).toMap
         methodDecl match {
           case q : QueryMethodDecl =>
-            val returnTyp = TypeChecker.typeOfExpr(methodDecl.body, varEnv)(classDecl.asType, ImmutableContext, classTable)
+            val returnTyp = TypeChecker.typeOfExpr(methodDecl.body, varEnv)(classDecl.asType, ImmutableContext, q.operationLevel.consistencyType(), classTable)
             if (!(returnTyp <= q.returnTyp))
               throw TypeException(s"return type is wrong. Expected: ${q.returnTyp}, but was $returnTyp (in method $methodId)")
-          case _ : UpdateMethodDecl =>
-            val returnTyp = TypeChecker.typeOfExpr(methodDecl.body, varEnv)(classDecl.asType, MutableContext, classTable).effectiveType()
+          case u : UpdateMethodDecl =>
+            val returnTyp = TypeChecker.typeOfExpr(methodDecl.body, varEnv)(classDecl.asType, MutableContext, u.operationLevel.consistencyType(), classTable).effectiveType()
             if (returnTyp.baseType != Natives.UNIT_TYPE)
               throw TypeException(s"return type is wrong. Expected: ${Natives.UNIT_TYPE}, but was $returnTyp (in method $methodId)")
         }
@@ -56,7 +56,7 @@ object TypeChecker {
   }
 
 
-  def typeOfExpr(expr: IRExpr, vars: VarEnv)(implicit thisType: ClassType, mutableContext: M, classTable: ClassTable): Type = expr match {
+  private def typeOfExpr(expr: IRExpr, vars: VarEnv)(implicit thisType: ClassType, mutableContext: M, implicitContext: ConsistencyType, classTable: ClassTable): Type = expr match {
     case Num(_) => CompoundType(Natives.INT_TYPE, Local, Bottom)
     case True => CompoundType(Natives.BOOL_TYPE, Local, Bottom)
     case False => CompoundType(Natives.BOOL_TYPE, Local, Bottom)
@@ -75,11 +75,13 @@ object TypeChecker {
       if (condType.baseType != Natives.BOOL_TYPE)
         throw TypeException("condition must be Bool, but was: " + condType)
 
-      // In the branches of the if, state changes are not allowed as we do not know which changes to apply
-      val t1 = typeOfExpr(thenExpr, vars)(thisType, ImmutableContext, classTable)
-      val t2 = typeOfExpr(elseExpr, vars)(thisType, ImmutableContext, classTable)
+      val newImplicitContext = implicitContext glb condType.consistencyType
 
-      if (t1 != t2)
+      // In the branches of the if, state changes are not allowed as we do not know which changes to apply TODO: invariant checker requirement ??
+      val t1 = typeOfExpr(thenExpr, vars)(thisType, ImmutableContext, newImplicitContext, classTable)
+      val t2 = typeOfExpr(elseExpr, vars)(thisType, ImmutableContext, newImplicitContext, classTable)
+
+      if (t1 != t2) // TODO: use lub for expression type inference instead?
         throw TypeException("branches have diverging types: " + t1 + " and " + t2)
 
       t1
@@ -98,6 +100,8 @@ object TypeChecker {
       CompoundType(thisType, Local, Mutable)
 
     case GetField(fieldId : FieldId) =>
+      if (thisType == null) throw TypeException("class of 'this' not defined")
+
       val classDecl = classTable
         .getOrElse(thisType.classId, throw TypeException("class of 'this' not available: " + thisType))
 
@@ -108,13 +112,21 @@ object TypeChecker {
 
 
     case SetField(fieldId : FieldId, value : IRExpr) =>
+      if (thisType == null) throw TypeException("class of 'this' not defined")
+
       if (mutableContext != MutableContext) throw TypeException("assignment in immutable context: " + thisType)
 
       val valueType = typeOfExpr(value, vars)
       val cls = classTable.getOrElse(thisType.classId, throw TypeException("class of 'this' not available: " + thisType))
       val fieldDecl = cls.getField(fieldId).getOrElse(throw TypeException("field not available: " + fieldId + s" (in class $thisType)"))
-      if (valueType != fieldDecl.typ)
+      if (!(valueType <= fieldDecl.typ))
         throw TypeException(s"assignment has wrong type. expected: ${fieldDecl.typ} (but was: ${valueType})")
+
+      if (fieldDecl.typ.effectiveType().mutabilityType == Immutable)
+        throw TypeException(s"assignment of immutable field")
+
+      if (!(implicitContext <= fieldDecl.typ.effectiveType().consistencyType))
+        throw TypeException(s"wrong assignment in explicit context: ${fieldDecl.typ} in $implicitContext context")
 
       valueType
 
@@ -125,7 +137,8 @@ object TypeChecker {
       recvType match {
         case CompoundType(recvClassType@ClassType(classId, typeArguments), _, _) =>
 
-          val (mthdDecl, typeEnv) = checkMethodCall(recvClassType, methodId, vars, arguments)
+          val argTypes = arguments.map(argExpr => typeOfExpr(argExpr, vars))
+          val (mthdDecl, typeEnv) = checkMethodCall(recvClassType, methodId, vars, argTypes)
 
           val queryDecl = mthdDecl match {
             case q : QueryMethodDecl => q
@@ -141,9 +154,16 @@ object TypeChecker {
       val recvType = typeOfExpr(recv, vars)
 
       recvType match {
-        case CompoundType(recvClassType@ClassType(classId, typeArguments), _, _) =>
+        case CompoundType(recvClassType@ClassType(classId, typeArguments), _, mutabilityType) =>
 
-          val (mthdDecl, typeEnv) = checkMethodCall(recvClassType, methodId, vars, arguments)
+          if (mutabilityType == Immutable)
+            throw TypeException(s"update call on immutable receiver")
+
+          val argTypes = arguments.map(argExpr => typeOfExpr(argExpr, vars))
+          val (mthdDecl, typeEnv) = checkMethodCall(recvClassType, methodId, vars, argTypes)
+
+          if (!(implicitContext <= mthdDecl.operationLevel.consistencyType()))
+            throw TypeException(s"wrong operation level in implicit context: ${mthdDecl.operationLevel.consistencyType()} in $implicitContext")
 
           val updateDecl = mthdDecl match {
             case u: UpdateMethodDecl => u
@@ -156,10 +176,13 @@ object TypeChecker {
       }
 
     case CallUpdateThis(methodId, arguments) =>
+      if (thisType == null) throw TypeException("class of 'this' not defined")
+
       if (mutableContext != MutableContext)
         throw TypeException(s"cannot call update on immutable type: $methodId")
 
-      val (mthdDecl, _) = checkMethodCall(thisType, methodId, vars, arguments)
+      val argTypes = arguments.map(argExpr => typeOfExpr(argExpr, vars))
+      val (mthdDecl, _) = checkMethodCall(thisType, methodId, vars, argTypes)
 
       val updateDecl = mthdDecl match {
         case u : UpdateMethodDecl => u
@@ -170,6 +193,8 @@ object TypeChecker {
 
 
     case CallUpdateField(fieldId, methodId, arguments) =>
+      if (thisType == null) throw TypeException("class of 'this' not defined")
+
       if (mutableContext != MutableContext)
         throw TypeException(s"cannot call update on immutable type: $methodId")
 
@@ -178,7 +203,8 @@ object TypeChecker {
 
       fieldDecl.typ match {
         case CompoundType(fieldClassType@ClassType(classId, typeArguments), _, _) =>
-          val (mthdDecl, _) = checkMethodCall(fieldClassType, methodId, vars, arguments)
+          val argTypes = arguments.map(argExpr => typeOfExpr(argExpr, vars))
+          val (mthdDecl, _) = checkMethodCall(fieldClassType, methodId, vars, argTypes)
 
           val updateDecl = mthdDecl match {
             case u : UpdateMethodDecl => u
@@ -206,7 +232,7 @@ object TypeChecker {
     case _ => ???
   }
 
-  private def checkMethodCall(recvType : ClassType, methodId : MethodId, vars : VarEnv, arguments : Seq[IRExpr])
+  private def checkMethodCall(recvType : ClassType, methodId : MethodId, vars : VarEnv, argTypes : Seq[Type])
                              (implicit thisType : ClassType, mutableContext : M, classTable : ClassTable) : (MethodDecl, TypeEnv) = {
 
     val recvClassDecl = classTable.getOrElse(recvType.classId, throw TypeException("class not available: " + thisType))
@@ -220,10 +246,8 @@ object TypeChecker {
     val methodDecl : MethodDecl = recvClassDecl
       .getMethod(methodId).getOrElse(throw TypeException("method not available: " + methodId + s" (in class $thisType)"))
 
-    if (arguments.size != methodDecl.declaredParameters.size)
-      throw TypeException(s"wrong number of arguments for method $methodId: ${arguments.size} (expected: ${methodDecl.declaredParameters.size}")
-
-    val argTypes = arguments.map(argExpr => typeOfExpr(argExpr, vars))
+    if (argTypes.size != methodDecl.declaredParameters.size)
+      throw TypeException(s"wrong number of arguments for method $methodId: ${argTypes.size} (expected: ${methodDecl.declaredParameters.size}")
 
     argTypes.zip(methodDecl.declaredParameterTypes).foreach(t => {
       val argType = t._1
