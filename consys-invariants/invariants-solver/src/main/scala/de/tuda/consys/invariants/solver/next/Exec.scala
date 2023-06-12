@@ -1,7 +1,7 @@
 package de.tuda.consys.invariants.solver.next
 
 import de.tuda.consys.invariants.solver.next.ir.IR.{ProgramDecl, SetField}
-import de.tuda.consys.invariants.solver.next.ir.{CompoundType, Immutable, Mutable, Natives, Strong, StrongOp, Weak, WeakOp}
+import de.tuda.consys.invariants.solver.next.ir.{CompoundType, Immutable, Mixed, Mutable, Natives, Strong, StrongOp, Weak, WeakOp}
 import de.tuda.consys.invariants.solver.next.ir.Natives.{BOOL_TYPE, INT_TYPE, STRING_TYPE}
 import de.tuda.consys.invariants.solver.next.translate.types.TypeChecker
 //import de.tuda.consys.invariants.solver.next.translate.{ProgramModel, Z3Env}
@@ -238,12 +238,17 @@ object Exec {
 
 		ProgramDecl(
 			Map(
-				"Int" -> Natives.INT_CLASS,
-				"Bool" -> Natives.BOOL_CLASS,
-				"Unit" -> Natives.UNIT_CLASS,
-				"Box" -> boxCls,
+				("Int", Weak) -> Natives.INT_CLASS,
+				("Int", Strong) -> Natives.INT_CLASS,
+				("Bool", Weak) -> Natives.BOOL_CLASS,
+				("Bool", Strong) -> Natives.BOOL_CLASS,
+				("Unit", Weak) -> Natives.UNIT_CLASS,
+				("Unit", Strong) -> Natives.UNIT_CLASS,
+				("Box", Mixed) -> boxCls,
+				("Box", Weak) -> boxCls,
+				("Box", Strong) -> boxCls,
 			),
-			Let("x", New("Box", Seq()),
+			Let("x", New("Box", Seq(), Mixed),
 				Let("n", CallQuery(Var("x"), "getVal", Seq()),
 					Sequence(Seq(
 						CallUpdate(Var("x"), "setVal", Seq(Var("n"))),

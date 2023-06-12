@@ -33,7 +33,7 @@ object Natives {
 		Seq(),
 		(ctx, sorts) => ctx.getStringSort,
 		Map(
-			"length" -> NativeQueryMethodDecl("length", WeakOp, Seq(), CompoundType(INT_TYPE, Local, Immutable), (ctx, recv, args) => {
+			"length" -> NativeQueryMethodDecl("length", WeakOp, Seq(), CompoundType(INT_TYPE, PolyConsistent, Immutable), (ctx, recv, args) => {
 				ctx.mkLength(recv.asInstanceOf[Expr[SeqSort[Sort]]])
 			})
 		)

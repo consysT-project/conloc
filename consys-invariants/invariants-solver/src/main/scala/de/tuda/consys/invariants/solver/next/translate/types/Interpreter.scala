@@ -53,14 +53,14 @@ object Interpreter {
 
         case Sequence(exprs) => exprs.foldLeft[Value](UnitV)((r, e) => interp(e, env, classTable))
 
-        case New(classId) =>
+        case New(classId, args, consistency) =>
             // store.transaction(ctx => ctx.replicate()) TODO: how to use backend when we don't have jvm classes?
             ???
 
         case CallQuery(recv, methodId, arguments) =>
             interp(recv, env, classTable) match {
-                case ObjectV(classId) =>
-                    val classDecl = classTable(classId)
+                case ObjectV(classId, consistency) =>
+                    val classDecl = classTable((classId, consistency))
                     classDecl.methods(methodId) match {
                         case decl: NativeMethodDecl => ???
                         case decl: ObjectMethodDecl =>

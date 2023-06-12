@@ -3,13 +3,14 @@ package de.tuda.consys.invariants.solver.next.ir
 
 import com.microsoft.z3.{Context, Expr, Sort}
 import de.tuda.consys.invariants.solver.next.ir.Types.{ClassId, TypeVarId}
+import de.tuda.consys.invariants.solver.next.translate.types.FieldInference
 
 import scala.collection.mutable
 
 
 object IR {
 
-	type ClassTable = Map[ClassId, ClassDecl[_ <: MethodDecl]]
+	type ClassTable = Map[(ClassId, ConsistencyType), ClassDecl[_ <: MethodDecl]]
 
 	type FieldId = String
 	type MethodId = String
@@ -122,7 +123,7 @@ object IR {
 	case class NumV(n: Int) extends Value
 	case class BoolV(b: Boolean) extends Value
 	case class StringV(s: String) extends Value
-	case class ObjectV(classId: ClassId) extends Value
+	case class ObjectV(classId: ClassId, consistency: ConsistencyType) extends Value
 	case object UnitV extends Value
 
 	trait IRExpr
@@ -140,7 +141,7 @@ object IR {
 
 	case class Equals(e1 : IRExpr, e2 : IRExpr) extends IRExpr
 
-	case class New(classId: ClassId, typeArguments: Seq[Type]) extends IRExpr
+	case class New(classId: ClassId, typeArguments: Seq[Type], consistency: ConsistencyType) extends IRExpr
 
 	case class Sequence(exprs: Seq[IRExpr]) extends IRExpr
 
@@ -160,38 +161,46 @@ object IR {
 	case class CallUpdateField(fieldId : FieldId, methodId : MethodId, arguments : Seq[IRExpr]) extends IRMethodCall
 
 
-	case class ProgramDecl(classTable : ClassTable, body: IRExpr) {
-		lazy val classes : Iterable[ClassDecl[_ <: MethodDecl]] = makeClassTableIterable
+	case class ProgramDecl(var classTable : ClassTable, body: IRExpr) {
+		lazy val classes : Iterable[(ClassDecl[_ <: MethodDecl], ConsistencyType)] = makeClassTableIterable
 
-		private def makeClassTableIterable : Iterable[ClassDecl[_ <: MethodDecl]] = {
-			def classesInType(typ : Type) : Set[ClassId] = typ match {
-				case TypeVar(typeVarId, _) => Set()
-				case CompoundType(ClassType(classId, typeArguments), _, _)=>
-					Set(classId) ++ typeArguments.foldLeft(Set.empty[ClassId])((set, typArg) => set ++ classesInType(typArg))
+		classTable = classTable.map {
+			case ((id, consistency), decl: ObjectClassDecl) => ((id, consistency), FieldInference.infer(decl, consistency))
+			case ((id, consistency), decl) => ((id, consistency), decl)  // TODO: PolyConsistency substitution
+		}
+
+		private def makeClassTableIterable : Iterable[(ClassDecl[_ <: MethodDecl], ConsistencyType)] = {
+			def classesInType(typ : Type) : Set[(ClassId, ConsistencyType)] = typ match {
+				case TypeVar(typeVarId, upperBound) => classesInType(upperBound)
+				case CompoundType(ClassType(classId, typeArguments), consistencyType, _)=>
+					Set((classId, consistencyType)) ++ typeArguments.foldLeft(Set.empty[(ClassId, ConsistencyType)])((set, typArg) => set ++ classesInType(typArg))
 			}
 
-			val classDecls = classTable.values
-			val classDependenciesBuilder = Map.newBuilder[ClassId, Set[ClassId]]
+			val classDecls = classTable.toSeq.map {
+				case ((_, consistency), decl: ObjectClassDecl) => (FieldInference.infer(decl, consistency), consistency)
+				case ((_, consistency), decl) => (decl, consistency)
+			}
+			val classDependenciesBuilder = Map.newBuilder[(ClassId, ConsistencyType), Set[(ClassId, ConsistencyType)]]
 
 			for (classDecl <- classDecls) {
 				classDecl match {
-					case NativeClassDecl(name, typeParameters, sort, methods) =>
-						classDependenciesBuilder.addOne(name, Set())
-					case ObjectClassDecl(name, typeParameters, invariant, fields, methods) =>
-						val dependencies : Set[ClassId] = fields.values.flatMap(decl => classesInType(decl.typ)).toSet
-						classDependenciesBuilder.addOne(name, dependencies)
+					case (NativeClassDecl(name, typeParameters, sort, methods), consistency) =>
+						classDependenciesBuilder.addOne((name, consistency), Set())
+					case (ObjectClassDecl(name, typeParameters, invariant, fields, methods), consistency) =>
+						val dependencies : Set[(ClassId, ConsistencyType)] = fields.values.flatMap(decl => classesInType(decl.typ)).toSet
+						classDependenciesBuilder.addOne((name, consistency), dependencies)
 				}
 			}
 			val classDependencies = classDependenciesBuilder.result()
 
-			val iterable = Iterable.newBuilder[ClassDecl[_ <: MethodDecl]]
-			val resolvedDependencies = mutable.Set.empty[ClassId]
+			val iterable = Iterable.newBuilder[(ClassDecl[_ <: MethodDecl], ConsistencyType)]
+			val resolvedDependencies = mutable.Set.empty[(ClassId, ConsistencyType)]
 			while (resolvedDependencies.size < classDecls.size) {
 				val before = resolvedDependencies.size
 				for (classDecl <- classDecls) {
-					if (classDependencies(classDecl.classId).subsetOf(resolvedDependencies)) {
+					if (classDependencies(classDecl._1.classId, classDecl._2).subsetOf(resolvedDependencies)) {
 						iterable.addOne(classDecl)
-						resolvedDependencies.addOne(classDecl.classId)
+						resolvedDependencies.addOne(classDecl._1.classId, classDecl._2)
 					}
 				}
 				if (resolvedDependencies.size == before)
