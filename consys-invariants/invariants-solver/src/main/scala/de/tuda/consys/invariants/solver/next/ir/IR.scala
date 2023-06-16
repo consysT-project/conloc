@@ -123,7 +123,7 @@ object IR {
 	case class NumV(n: Int) extends Value
 	case class BoolV(b: Boolean) extends Value
 	case class StringV(s: String) extends Value
-	case class ObjectV(classId: ClassId, consistency: ConsistencyType) extends Value
+	case class ObjectV(objectId: String, classId: ClassId, consistency: ConsistencyType, fields: Map[FieldId, Value]) extends Value with Serializable
 	case object UnitV extends Value
 
 	trait IRExpr
@@ -141,7 +141,7 @@ object IR {
 
 	case class Equals(e1 : IRExpr, e2 : IRExpr) extends IRExpr
 
-	case class New(classId: ClassId, typeArguments: Seq[Type], consistency: ConsistencyType) extends IRExpr
+	case class New(objectId: String, classId: ClassId, typeArguments: Seq[Type], consistency: ConsistencyType, args: Map[FieldId, IRExpr]) extends IRExpr
 
 	case class Sequence(exprs: Seq[IRExpr]) extends IRExpr
 

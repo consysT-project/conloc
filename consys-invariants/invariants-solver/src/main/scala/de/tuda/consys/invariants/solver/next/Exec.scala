@@ -1,9 +1,9 @@
 package de.tuda.consys.invariants.solver.next
 
 import de.tuda.consys.invariants.solver.next.ir.IR.{ProgramDecl, SetField}
-import de.tuda.consys.invariants.solver.next.ir.{CompoundType, Immutable, Mixed, Mutable, Natives, Strong, StrongOp, Weak, WeakOp}
+import de.tuda.consys.invariants.solver.next.ir.{CompoundType, Immutable, Mixed, Mutable, Natives, PolyConsistent, Strong, StrongOp, Weak, WeakOp}
 import de.tuda.consys.invariants.solver.next.ir.Natives.{BOOL_TYPE, INT_TYPE, STRING_TYPE}
-import de.tuda.consys.invariants.solver.next.translate.types.TypeChecker
+import de.tuda.consys.invariants.solver.next.translate.types.{Interpreter, TypeChecker}
 //import de.tuda.consys.invariants.solver.next.translate.{ProgramModel, Z3Env}
 import de.tuda.stg.consys.logging.Logger
 
@@ -221,7 +221,7 @@ object Exec {
 			Seq(),
 			True,
 			Map(
-				"value" -> FieldDecl("value", CompoundType(INT_TYPE, Strong, Mutable)),
+				"value" -> FieldDecl("value", CompoundType(INT_TYPE, PolyConsistent, Mutable)),
 			),
 			Map(
 				"setVal" -> ObjectUpdateMethodDecl("setVal", StrongOp, Seq(VarDecl("x", CompoundType(INT_TYPE, Strong, Mutable))),
@@ -244,11 +244,11 @@ object Exec {
 				("Bool", Strong) -> Natives.BOOL_CLASS,
 				("Unit", Weak) -> Natives.UNIT_CLASS,
 				("Unit", Strong) -> Natives.UNIT_CLASS,
-				("Box", Mixed) -> boxCls,
-				("Box", Weak) -> boxCls,
+				//("Box", Mixed) -> boxCls,
+				//("Box", Weak) -> boxCls,
 				("Box", Strong) -> boxCls,
 			),
-			Let("x", New("Box", Seq(), Mixed),
+			Let("x", New("b", "Box", Seq(), Strong, Map("value" -> Num(1))),
 				Let("n", CallQuery(Var("x"), "getVal", Seq()),
 					Sequence(Seq(
 						CallUpdate(Var("x"), "setVal", Seq(Var("n"))),
@@ -261,6 +261,7 @@ object Exec {
 	def main(args : Array[String]) : Unit = {
 		val p = exampleProgram3()
 		TypeChecker.checkProgram(p)
+		Interpreter.interp(p)
 
 		/*
 		val prog = exampleProgram3()
