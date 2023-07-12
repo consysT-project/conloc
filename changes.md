@@ -71,7 +71,7 @@ We added some functionality to the ```ConsistencyChecker``` (all methods), to su
 
 ## Type Checker Tests
 
-The test cases can be found in the ```./consys-type-checker/consys-type-checker-test``` subproject.
+The test cases can be found in the ```./conloc-type-checker/conloc-type-checker-test``` subproject.
 
 The ```src/test/java/.../OperationTest``` runs all tests under the ```tests/testfiles/operations``` directory, which are the new test cases for the features implemented in this thesis.
 

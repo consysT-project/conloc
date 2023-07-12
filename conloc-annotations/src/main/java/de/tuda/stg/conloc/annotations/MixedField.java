@@ -1,0 +1,14 @@
+package de.tuda.stg.conloc.annotations;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MixedField {
+    String consistencyForWeakDefault() default "";
+    // currently unused by runtime
+    String consistencyForStrongDefault() default "";
+}

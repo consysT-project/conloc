@@ -18,7 +18,7 @@ In IntelliJ, you have to add the annotation processor manually.
 1. Go to `Preferences > Annotation Processors`. You can try to check `Obtain from project`.
 IntelliJ may be able to retrieve the correct checker by default. If it can, you are already finished.
 
-2. Add the compiled jar of the consys-type-checker project
+2. Add the compiled jar of the conloc-type-checker project
 
 3. Add the checker.jar from the CheckerFramework
 
@@ -46,18 +46,18 @@ When running Cassandra locally, best use the Cassandra Cluster Manager `ccm`.
 
 ## Project overview
 
-* **consys-core**: Implementation of the middleware. Integrates Cassandra, Zookeeper, and/or Akka.
+* **conloc-core**: Implementation of the middleware. Integrates Cassandra, Zookeeper, and/or Akka.
   
-* **consys-japi**: Implementation of the frontend API for Java projects. Requires the consys-compiler Javac plugin.
+* **conloc-japi**: Implementation of the frontend API for Java projects. Requires the conloc-compiler Javac plugin.
 
-* **consys-compiler**: Javac plugin for preprocessing Java API.
+* **conloc-compiler**: Javac plugin for preprocessing Java API.
 
-* **consys-type-checker**: Implementation of the type checker using the 
+* **conloc-type-checker**: Implementation of the type checker using the 
 Checker framework.
 
 * **integration-tests**: Fully integrated ConSysT project for testing and playing around.
 
-* **consys-bench**: Benchmark framework.
+* **conloc-bench**: Benchmark framework.
 
 * **demos**: Case studies and benchmarks.
 

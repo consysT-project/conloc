@@ -2,7 +2,7 @@
 sudo apt update
 sudo apt install maven openjdk-11-jdk-headless -y
 
-# Install consys
+# Install conloc
 cd ~
 git clone https://github.com/consysT-project/consysT-code.git
 cd consysT-code/
@@ -20,7 +20,7 @@ cp ~/consysT-code/aws/config/cassandra/cassandra01.yaml conf/cassandra.yaml
 ./bin/nodetool status        
 
 # Configuring cassandra.yaml
-cluster_name: 'consys-bench'
+cluster_name: 'conloc-bench'
 
 seed_provider:
     - class_name: org.apache.cassandra.locator.SimpleSeedProvider
