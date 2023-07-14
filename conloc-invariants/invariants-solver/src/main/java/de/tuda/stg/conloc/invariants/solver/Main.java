@@ -48,7 +48,7 @@ public class Main {
 	}
 
 
-	public static final Path[] DEFAULT_EXAMPLE = Examples.RIAK_PNCOUNTER;
+	public static final Path[] DEFAULT_EXAMPLE = Examples.GCOUNTER;
 
 	private static void printUsage() {
 		Logger.info("Usage: conloc [--bench-sys | --bench-java | case-study-name]");

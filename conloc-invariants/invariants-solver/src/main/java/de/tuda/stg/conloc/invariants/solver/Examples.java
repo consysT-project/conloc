@@ -86,6 +86,11 @@ public class Examples {
 			Paths.get("conloc-invariants/invariants-examples/src/main/java/de/tuda/stg/conloc/invariants/lib/examples/shoppingcart/Item.java"),
 			Paths.get("conloc-invariants/invariants-examples/src/main/java/de/tuda/stg/conloc/invariants/lib/examples/shoppingcart/ShoppingCart.java")
 	};
+
+	public static final Path[] SHOP = new Path[] {
+			Paths.get("conloc-invariants/invariants-examples/src/main/java/de/tuda/stg/conloc/invariants/lib/crdts/PNCounter.java"),
+			Paths.get("conloc-invariants/invariants-examples/src/main/java/de/tuda/stg/conloc/invariants/lib/examples/shoppingcart/Shop.java")
+	};
 	
 	public static final Path[] CRDTLIB = new Path[] {
 			Paths.get("conloc-invariants/invariants-examples/src/main/java/de/tuda/stg/conloc/invariants/lib/crdts/GCounter.java"),
